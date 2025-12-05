@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import Header from "../components/header";
 
 export default function Home() {
   const [backendStatus, setBackendStatus] = useState("Checking...");
@@ -25,6 +26,7 @@ export default function Home() {
 
   return (
     <div style={{ fontFamily: "system-ui", padding: 20 }}>
+      <Header />
       <h1>Hello from Next.js</h1>
       <p>Frontend is running.</p>
       
