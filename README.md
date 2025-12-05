@@ -24,10 +24,14 @@
 3. Install dependencies:
    pip install -r requirements.txt
 
-4. Start the FastAPI server:
-   # Option 1: Using Python directly
-   python src/main.py
-   # Option 2: Using uvicorn directly
+4. Create .env file:
+   SPOTIFY_CLIENT_ID=8c473fd91b714f92bb09f3037735248f
+   SPOTIFY_CLIENT_SECRET=c5e4cb57a2b0469299b41c5ad855e668
+   SPOTIFY_REDIRECT_URI=http://127.0.0.1:8000/auth/spotify/callback
+   SPOTIFY_SCOPES="user-read-email user-read-private user-read-recently-played user-top-read"
+   APP_FRONTEND_URL="http://localhost:3000"
+
+5. Start the FastAPI server:
    uvicorn src.main:app --reload --host 0.0.0.0 --port 8000
 
    The backend will be available at: **http://localhost:8000**
