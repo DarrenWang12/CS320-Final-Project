@@ -5,6 +5,8 @@ import uvicorn
 import pathlib
 
 from .auth.spotify import router as spotify_router
+from .collections.collections import router as collections_router
+from .analytics.analytics import router as analytics_router
 
 # Load environment variables from .env file
 # Look for .env in the backend directory (parent of src)
@@ -25,8 +27,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Include auth routes
+# Include routers
 app.include_router(spotify_router)
+app.include_router(collections_router)
+app.include_router(analytics_router)
 
 @app.get("/")
 async def read_root():

@@ -362,3 +362,13 @@ def spotify_debug():
         ]
     }
 
+
+@router.get("/auth/spotify/logout")
+def spotify_logout(response: Response):
+    """
+    Logout endpoint - clears any session data
+    """
+    # In a real app, you'd clear session data, invalidate tokens, etc.
+    # For now, just return success
+    response.delete_cookie("spotify_auth_state")
+    return {"status": "logged_out", "message": "Successfully logged out"}
