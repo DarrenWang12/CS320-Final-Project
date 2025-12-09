@@ -3,7 +3,6 @@ import Layout from "../components/Layout";
 
 export default function Collections() {
   const [loading, setLoading] = useState(true);
-  const [selectedFilter, setSelectedFilter] = useState("All");
   const [collections, setCollections] = useState([]);
 
   useEffect(() => {
@@ -295,7 +294,6 @@ export default function Collections() {
           </div>
         ))}
       </div>
-
 
     </Layout>
   );

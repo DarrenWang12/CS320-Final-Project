@@ -143,19 +143,49 @@ export default function Dashboard() {
           <span>Intense</span>
         </div>
 
-        <button style={{
-          backgroundColor: "#4CAF50",
-          color: "white",
-          border: "none",
-          padding: "15px 30px",
-          borderRadius: "25px",
-          cursor: "pointer",
-          width: "100%",
-          marginTop: 20,
-          fontSize: "16px",
-          fontWeight: "bold"
-        }}>
-          Get Song Recommendations
+        <button 
+          onClick={async () => {
+            // Fetch recommendations directly without modal
+            try {
+              const response = await fetch(`http://localhost:8000/api/recommendations?mood=${selectedMood}`);
+              const data = await response.json();
+              // Handle recommendations here - could update state or show inline
+              console.log('Recommendations:', data.recommendations);
+              alert(`Getting ${selectedMood} recommendations!`);
+            } catch (error) {
+              console.error('Error fetching recommendations:', error);
+              alert(`Getting ${selectedMood} recommendations!`);
+            }
+          }}
+          style={{
+            backgroundColor: "#FF9800",
+            color: "white",
+            border: "none",
+            padding: "15px 30px",
+            borderRadius: "25px",
+            cursor: "pointer",
+            width: "100%",
+            marginTop: 20,
+            fontSize: "16px",
+            fontWeight: "600",
+            transition: "all 0.3s ease",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 10
+          }}
+          onMouseEnter={(e) => {
+            e.target.style.backgroundColor = "#F57C00";
+            e.target.style.transform = "translateY(-2px)";
+            e.target.style.boxShadow = "0 8px 25px rgba(255, 152, 0, 0.3)";
+          }}
+          onMouseLeave={(e) => {
+            e.target.style.backgroundColor = "#FF9800";
+            e.target.style.transform = "translateY(0)";
+            e.target.style.boxShadow = "none";
+          }}>
+          <span style={{ fontSize: "20px" }}></span>
+          Get {selectedMood} Recommendations
         </button>
       </div>
 
@@ -206,4 +236,6 @@ export default function Dashboard() {
     </Layout>
   );
 }
+
+
 
