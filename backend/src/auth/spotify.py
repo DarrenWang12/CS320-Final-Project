@@ -6,6 +6,7 @@ import base64
 import secrets
 from urllib.parse import urlencode
 from datetime import datetime, timedelta
+from typing import Optional
 
 import httpx
 from fastapi import APIRouter, Request, Response, HTTPException
@@ -96,9 +97,9 @@ def spotify_login(response: Response):
 @router.get("/auth/spotify/callback")
 async def spotify_callback(
     request: Request,
-    code: str | None = None,
-    state: str | None = None,
-    error: str | None = None
+    code: Optional[str] = None,
+    state: Optional[str] = None,
+    error: Optional[str] = None
 ):
     """
     Handles the callback from Spotify OAuth.
@@ -362,3 +363,13 @@ def spotify_debug():
         ]
     }
 
+
+@router.get("/auth/spotify/logout")
+def spotify_logout(response: Response):
+    """
+    Logout endpoint - clears any session data
+    """
+    # In a real app, you'd clear session data, invalidate tokens, etc.
+    # For now, just return success
+    response.delete_cookie("spotify_auth_state")
+    return {"status": "logged_out", "message": "Successfully logged out"}
