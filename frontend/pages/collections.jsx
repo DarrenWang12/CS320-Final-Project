@@ -16,6 +16,7 @@ export default function Collections() {
       .catch(error => {
         console.error('Error fetching collections:', error);
         // Fall back to mock data
+        // this will be removed later !
         const mockCollections = [
           {
             id: 1,
