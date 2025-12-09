@@ -96,25 +96,6 @@ export default function Header() {
           </div>
         </Link>
         
-        <Link href="/collections" style={{ textDecoration: 'none' }}>
-          <div style={{ 
-            cursor: "pointer", 
-            color: isActiveTab('/collections') ? "#ffffff" : "#888",
-            backgroundColor: isActiveTab('/collections') ? "#333" : "transparent",
-            fontSize: "14px",
-            fontWeight: "500",
-            padding: "8px 16px",
-            borderRadius: "8px",
-            transition: "all 0.3s ease",
-            display: "flex",
-            alignItems: "center",
-            gap: 8
-          }}>
-            
-            Collections
-          </div>
-        </Link>
-        
         <Link href="/analytics" style={{ textDecoration: 'none' }}>
           <div style={{ 
             cursor: "pointer", 
@@ -131,6 +112,25 @@ export default function Header() {
           }}>
             
             Analytics
+          </div>
+        </Link>
+
+        <Link href="/collections" style={{ textDecoration: 'none' }}>
+          <div style={{ 
+            cursor: "pointer", 
+            color: isActiveTab('/collections') ? "#ffffff" : "#888",
+            backgroundColor: isActiveTab('/collections') ? "#333" : "transparent",
+            fontSize: "14px",
+            fontWeight: "500",
+            padding: "8px 16px",
+            borderRadius: "8px",
+            transition: "all 0.3s ease",
+            display: "flex",
+            alignItems: "center",
+            gap: 8
+          }}>
+            
+            Collections
           </div>
         </Link>
       </div>

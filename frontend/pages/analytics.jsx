@@ -68,7 +68,7 @@ export default function Analytics() {
   return (
     <Layout>
       {/* Page Header */}
-      <div style={{ textAlign: "center", marginBottom: 40 }}>
+      <div style={{ position: "relative", textAlign: "center", marginBottom: 40 }}>
         <h2 style={{ 
           fontSize: "48px", 
           margin: "20px 0", 
@@ -80,38 +80,45 @@ export default function Analytics() {
         }}>
           Your Music Analytics
         </h2>
-        <p style={{ color: "#888", fontSize: "18px" }}>
+        <p style={{ color: "#888", fontSize: "18px", marginBottom: 20 }}>
           Discover your listening patterns and mood trends
         </p>
-      </div>
-
-      {/* Time Filter */}
-      <div style={{ 
-        display: "flex", 
-        justifyContent: "center", 
-        gap: 15, 
-        marginBottom: 40,
-        flexWrap: "wrap"
-      }}>
-        {["This Week", "This Month", "Last 3 Months", "This Year"].map((filter) => (
+        
+        {/* Get Recently Played Button */}
+        <div style={{ display: "flex", justifyContent: "center" }}>
           <button
-            key={filter}
-            onClick={() => setTimeFilter(filter)}
+            onClick={() => {
+              console.log('Fetching recently played songs...');
+              // TODO: Implement fetch recently played songs functionality
+              alert('Getting recently played songs...');
+            }}
             style={{
-              backgroundColor: timeFilter === filter ? "#2196F3" : "transparent",
-              color: timeFilter === filter ? "white" : "#888",
-              border: timeFilter === filter ? "2px solid #2196F3" : "2px solid #555",
-              padding: "10px 20px",
+              backgroundColor: "#2196F3",
+              color: "white",
+              border: "none",
+              padding: "15px 40px",
               borderRadius: "25px",
+              fontSize: "16px",
+              fontWeight: "600",
               cursor: "pointer",
-              fontSize: "14px",
-              fontWeight: timeFilter === filter ? "600" : "400",
-              transition: "all 0.3s ease"
+              transition: "all 0.3s ease",
+              boxShadow: "0 4px 12px rgba(33, 150, 243, 0.3)",
+              minWidth: "200px"
+            }}
+            onMouseEnter={(e) => {
+              e.target.style.backgroundColor = "#1976D2";
+              e.target.style.transform = "translateY(-2px)";
+              e.target.style.boxShadow = "0 6px 16px rgba(33, 150, 243, 0.4)";
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.backgroundColor = "#2196F3";
+              e.target.style.transform = "translateY(0)";
+              e.target.style.boxShadow = "0 4px 12px rgba(33, 150, 243, 0.3)";
             }}
           >
-            {filter}
+            Get Recently Played
           </button>
-        ))}
+        </div>
       </div>
 
       {/* Stats Grid */}
@@ -180,24 +187,6 @@ export default function Analytics() {
           </p>
         </div>
 
-        {/* Mood Diversity */}
-        <div style={{
-          backgroundColor: "#2a2a2a",
-          borderRadius: "20px",
-          padding: "25px",
-          textAlign: "center",
-          border: "2px solid #9C27B0"
-        }}>
-          <h3 style={{ color: "#9C27B0", fontSize: "16px", margin: "0 0 10px 0" }}>
-            Mood Diversity
-          </h3>
-          <p style={{ fontSize: "32px", fontWeight: "bold", color: "white", margin: "0 0 5px 0" }}>
-            {moodStats.filter(stat => stat.percentage > 0).length}/5
-          </p>
-          <p style={{ color: "#888", fontSize: "14px", margin: 0 }}>
-            moods explored
-          </p>
-        </div>
       </div>
 
       {/* Charts Section */}
