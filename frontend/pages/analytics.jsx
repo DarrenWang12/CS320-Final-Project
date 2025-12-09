@@ -55,8 +55,6 @@ export default function Analytics() {
     { name: "Indie", percentage: 10, color: "#9C27B0" }
   ];
 
-  const maxHours = Math.max(...listeningData.map(d => d.hours));
-
   if (loading) {
     return (
       <Layout>
@@ -74,7 +72,7 @@ export default function Analytics() {
         <h2 style={{ 
           fontSize: "48px", 
           margin: "20px 0", 
-          background: "linear-gradient(135deg, #4CAF50, #81C784, #A5D6A7)",
+          background: "linear-gradient(135deg, #2196F3, #64B5F6, #90CAF9)",
           WebkitBackgroundClip: "text",
           WebkitTextFillColor: "transparent",
           backgroundClip: "text",
@@ -83,7 +81,7 @@ export default function Analytics() {
           Your Music Analytics
         </h2>
         <p style={{ color: "#888", fontSize: "18px" }}>
-          Insights into your listening habits and mood patterns
+          Discover your listening patterns and mood trends
         </p>
       </div>
 
@@ -92,18 +90,19 @@ export default function Analytics() {
         display: "flex", 
         justifyContent: "center", 
         gap: 15, 
-        marginBottom: 40
+        marginBottom: 40,
+        flexWrap: "wrap"
       }}>
         {["This Week", "This Month", "Last 3 Months", "This Year"].map((filter) => (
           <button
             key={filter}
             onClick={() => setTimeFilter(filter)}
             style={{
-              backgroundColor: timeFilter === filter ? "#4CAF50" : "transparent",
+              backgroundColor: timeFilter === filter ? "#2196F3" : "transparent",
               color: timeFilter === filter ? "white" : "#888",
-              border: timeFilter === filter ? "2px solid #4CAF50" : "2px solid #555",
-              padding: "8px 16px",
-              borderRadius: "20px",
+              border: timeFilter === filter ? "2px solid #2196F3" : "2px solid #555",
+              padding: "10px 20px",
+              borderRadius: "25px",
               cursor: "pointer",
               fontSize: "14px",
               fontWeight: timeFilter === filter ? "600" : "400",
@@ -118,52 +117,29 @@ export default function Analytics() {
       {/* Stats Grid */}
       <div style={{ 
         display: "grid", 
-        gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
+        gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
         gap: 25, 
-        maxWidth: "1400px",
+        maxWidth: "1000px",
         margin: "0 auto 40px auto",
         padding: "0 20px"
       }}>
-        {/* Total Listening Time */}
+        {/* Total Listening Hours */}
         <div style={{
           backgroundColor: "#2a2a2a",
           borderRadius: "20px",
           padding: "25px",
-          textAlign: "center"
+          textAlign: "center",
+          border: "2px solid #4CAF50"
         }}>
-          <h3 style={{ color: "#4CAF50", fontSize: "16px", margin: "0 0 15px 0" }}>
-            Total Listening Time
+          <h3 style={{ color: "#4CAF50", fontSize: "16px", margin: "0 0 10px 0" }}>
+            Total Hours
           </h3>
-          <div style={{ fontSize: "48px", fontWeight: "bold", color: "white", margin: "10px 0" }}>
-            {analyticsData?.total_listening_hours || 41.0}
-          </div>
-          <div style={{ color: "#888", fontSize: "14px" }}>
-            hours this week
-          </div>
-          <div style={{ color: "#4CAF50", fontSize: "12px", marginTop: 10 }}>
-            {analyticsData?.week_change || "+23%"} from last week
-          </div>
-        </div>
-
-        {/* Average Daily Sessions */}
-        <div style={{
-          backgroundColor: "#2a2a2a",
-          borderRadius: "20px",
-          padding: "25px",
-          textAlign: "center"
-        }}>
-          <h3 style={{ color: "#FFC107", fontSize: "16px", margin: "0 0 15px 0" }}>
-            Daily Sessions
-          </h3>
-          <div style={{ fontSize: "48px", fontWeight: "bold", color: "white", margin: "10px 0" }}>
-            {analyticsData?.daily_average || 5.9}
-          </div>
-          <div style={{ color: "#888", fontSize: "14px" }}>
-            hours per day average
-          </div>
-          <div style={{ color: "#FFC107", fontSize: "12px", marginTop: 10 }}>
-            +8% from last week
-          </div>
+          <p style={{ fontSize: "32px", fontWeight: "bold", color: "white", margin: "0 0 5px 0" }}>
+            {moodStats.reduce((total, stat) => total + stat.hours, 0).toFixed(1)}h
+          </p>
+          <p style={{ color: "#888", fontSize: "14px", margin: 0 }}>
+            {timeFilter.toLowerCase()}
+          </p>
         </div>
 
         {/* Top Mood */}
@@ -171,20 +147,56 @@ export default function Analytics() {
           backgroundColor: "#2a2a2a",
           borderRadius: "20px",
           padding: "25px",
-          textAlign: "center"
+          textAlign: "center",
+          border: `2px solid ${moodStats[0]?.color}`
         }}>
-          <h3 style={{ color: "#9C27B0", fontSize: "16px", margin: "0 0 15px 0" }}>
-            Most Common Mood
+          <h3 style={{ color: moodStats[0]?.color, fontSize: "16px", margin: "0 0 10px 0" }}>
+            Dominant Mood
           </h3>
-          <div style={{ fontSize: "32px", fontWeight: "bold", color: "white", margin: "10px 0" }}>
-            {analyticsData?.top_mood || "Happy"}
-          </div>
-          <div style={{ color: "#888", fontSize: "14px" }}>
-            {analyticsData?.mood_percentage || 35}% of listening time
-          </div>
-          <div style={{ color: "#9C27B0", fontSize: "12px", marginTop: 10 }}>
-            {moodStats[0]?.hours || 14.2} hours this week
-          </div>
+          <p style={{ fontSize: "32px", fontWeight: "bold", color: "white", margin: "0 0 5px 0" }}>
+            {moodStats[0]?.mood}
+          </p>
+          <p style={{ color: "#888", fontSize: "14px", margin: 0 }}>
+            {moodStats[0]?.percentage}% of listening
+          </p>
+        </div>
+
+        {/* Songs Played */}
+        <div style={{
+          backgroundColor: "#2a2a2a",
+          borderRadius: "20px",
+          padding: "25px",
+          textAlign: "center",
+          border: "2px solid #FFC107"
+        }}>
+          <h3 style={{ color: "#FFC107", fontSize: "16px", margin: "0 0 10px 0" }}>
+            Songs Played
+          </h3>
+          <p style={{ fontSize: "32px", fontWeight: "bold", color: "white", margin: "0 0 5px 0" }}>
+            {topArtists.reduce((total, artist) => total + artist.plays, 0)}
+          </p>
+          <p style={{ color: "#888", fontSize: "14px", margin: 0 }}>
+            tracks discovered
+          </p>
+        </div>
+
+        {/* Mood Diversity */}
+        <div style={{
+          backgroundColor: "#2a2a2a",
+          borderRadius: "20px",
+          padding: "25px",
+          textAlign: "center",
+          border: "2px solid #9C27B0"
+        }}>
+          <h3 style={{ color: "#9C27B0", fontSize: "16px", margin: "0 0 10px 0" }}>
+            Mood Diversity
+          </h3>
+          <p style={{ fontSize: "32px", fontWeight: "bold", color: "white", margin: "0 0 5px 0" }}>
+            {moodStats.filter(stat => stat.percentage > 0).length}/5
+          </p>
+          <p style={{ color: "#888", fontSize: "14px", margin: 0 }}>
+            moods explored
+          </p>
         </div>
       </div>
 
@@ -192,8 +204,8 @@ export default function Analytics() {
       <div style={{ 
         display: "grid", 
         gridTemplateColumns: "1fr 1fr",
-        gap: 25, 
-        maxWidth: "1400px",
+        gap: 30, 
+        maxWidth: "1200px",
         margin: "0 auto 40px auto",
         padding: "0 20px"
       }}>
@@ -203,53 +215,51 @@ export default function Analytics() {
           borderRadius: "20px",
           padding: "25px"
         }}>
-          <h3 style={{ color: "#4CAF50", fontSize: "18px", marginBottom: 25 }}>
+          <h3 style={{ color: "white", fontSize: "20px", marginBottom: 20 }}>
             Mood Distribution
           </h3>
-          {moodStats.map((mood, index) => (
-            <div key={mood.mood} style={{ marginBottom: 15 }}>
-              <div style={{ 
-                display: "flex", 
-                justifyContent: "space-between", 
-                alignItems: "center",
-                marginBottom: 8
-              }}>
-                <span style={{ fontSize: "14px", color: "white" }}>{mood.mood}</span>
-                <span style={{ fontSize: "14px", color: "#888" }}>{mood.percentage}%</span>
-              </div>
-              <div style={{
-                height: "8px",
-                backgroundColor: "#444",
-                borderRadius: "4px",
-                overflow: "hidden"
-              }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 15 }}>
+            {moodStats.map((stat) => (
+              <div key={stat.mood}>
+                <div style={{ 
+                  display: "flex", 
+                  justifyContent: "space-between", 
+                  alignItems: "center",
+                  marginBottom: 8
+                }}>
+                  <span style={{ color: stat.color, fontWeight: "600" }}>
+                    {stat.mood}
+                  </span>
+                  <span style={{ color: "white" }}>
+                    {stat.percentage}% ({stat.hours}h)
+                  </span>
+                </div>
                 <div style={{
-                  height: "100%",
-                  width: `${mood.percentage}%`,
-                  backgroundColor: mood.color,
+                  height: "8px",
+                  backgroundColor: "#444",
                   borderRadius: "4px",
-                  transition: "width 0.8s ease"
-                }} />
+                  overflow: "hidden"
+                }}>
+                  <div style={{
+                    height: "100%",
+                    width: `${stat.percentage}%`,
+                    backgroundColor: stat.color,
+                    borderRadius: "4px",
+                    transition: "width 0.5s ease"
+                  }} />
+                </div>
               </div>
-              <div style={{ 
-                fontSize: "12px", 
-                color: "#666", 
-                marginTop: 4,
-                textAlign: "right"
-              }}>
-                {mood.hours} hours
-              </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
 
-        {/* Weekly Listening Activity */}
+        {/* Weekly Activity */}
         <div style={{
           backgroundColor: "#2a2a2a",
           borderRadius: "20px",
           padding: "25px"
         }}>
-          <h3 style={{ color: "#4CAF50", fontSize: "18px", marginBottom: 25 }}>
+          <h3 style={{ color: "white", fontSize: "20px", marginBottom: 20 }}>
             Weekly Activity
           </h3>
           <div style={{ 
@@ -267,12 +277,12 @@ export default function Analytics() {
                 flex: 1
               }}>
                 <div style={{
-                  width: "30px",
-                  height: `${(day.hours / maxHours) * 160}px`,
-                  backgroundColor: "#4CAF50",
+                  width: "24px",
+                  height: `${(day.hours / Math.max(...listeningData.map(d => d.hours))) * 160}px`,
+                  backgroundColor: "#2196F3",
                   borderRadius: "4px 4px 0 0",
                   marginBottom: 10,
-                  transition: "height 0.8s ease"
+                  transition: "height 0.5s ease"
                 }} />
                 <div style={{ 
                   fontSize: "12px", 
@@ -282,7 +292,7 @@ export default function Analytics() {
                   {day.day}
                 </div>
                 <div style={{ 
-                  fontSize: "11px", 
+                  fontSize: "10px", 
                   color: "#666"
                 }}>
                   {day.hours}h
@@ -293,13 +303,13 @@ export default function Analytics() {
         </div>
       </div>
 
-      {/* Top Lists */}
+      {/* Top Artists & Genres */}
       <div style={{ 
         display: "grid", 
         gridTemplateColumns: "1fr 1fr",
-        gap: 25, 
-        maxWidth: "1400px",
-        margin: "0 auto 50px auto",
+        gap: 30, 
+        maxWidth: "1200px",
+        margin: "0 auto 40px auto",
         padding: "0 20px"
       }}>
         {/* Top Artists */}
@@ -308,48 +318,51 @@ export default function Analytics() {
           borderRadius: "20px",
           padding: "25px"
         }}>
-          <h3 style={{ color: "#4CAF50", fontSize: "18px", marginBottom: 20 }}>
-            Top Artists This Week
+          <h3 style={{ color: "white", fontSize: "20px", marginBottom: 20 }}>
+            Top Artists
           </h3>
-          {topArtists.map((artist, index) => (
-            <div key={artist.name} style={{
-              display: "flex",
-              alignItems: "center",
-              padding: "12px 0",
-              borderBottom: index < topArtists.length - 1 ? "1px solid #444" : "none"
-            }}>
-              <div style={{
-                width: 30,
-                height: 30,
-                backgroundColor: "#4CAF50",
-                borderRadius: "50%",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: "14px",
-                fontWeight: "bold",
-                marginRight: 15,
-                color: "white"
+          <div style={{ display: "flex", flexDirection: "column", gap: 15 }}>
+            {topArtists.map((artist, index) => (
+              <div key={artist.name} style={{ 
+                display: "flex", 
+                alignItems: "center", 
+                justifyContent: "space-between",
+                padding: "10px 0",
+                borderBottom: index < topArtists.length - 1 ? "1px solid #444" : "none"
               }}>
-                {index + 1}
-              </div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: "14px", fontWeight: "500", color: "white" }}>
-                  {artist.name}
+                <div style={{ display: "flex", alignItems: "center", gap: 15 }}>
+                  <div style={{
+                    width: "30px",
+                    height: "30px",
+                    backgroundColor: "#4CAF50",
+                    borderRadius: "50%",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: "12px",
+                    fontWeight: "bold",
+                    color: "white"
+                  }}>
+                    {index + 1}
+                  </div>
+                  <span style={{ color: "white", fontWeight: "500" }}>
+                    {artist.name}
+                  </span>
                 </div>
-                <div style={{ fontSize: "12px", color: "#888" }}>
-                  {artist.plays} plays
+                <div style={{ textAlign: "right" }}>
+                  <div style={{ color: "white", fontSize: "14px" }}>
+                    {artist.plays} plays
+                  </div>
+                  <div style={{ 
+                    color: artist.change.startsWith('+') ? "#4CAF50" : "#F44336", 
+                    fontSize: "12px" 
+                  }}>
+                    {artist.change}
+                  </div>
                 </div>
               </div>
-              <div style={{ 
-                fontSize: "12px", 
-                color: artist.change.startsWith('+') ? "#4CAF50" : "#F44336",
-                fontWeight: "500"
-              }}>
-                {artist.change}
-              </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
 
         {/* Top Genres */}
@@ -358,46 +371,59 @@ export default function Analytics() {
           borderRadius: "20px",
           padding: "25px"
         }}>
-          <h3 style={{ color: "#4CAF50", fontSize: "18px", marginBottom: 20 }}>
-            Favorite Genres
+          <h3 style={{ color: "white", fontSize: "20px", marginBottom: 20 }}>
+            Top Genres
           </h3>
-          {topGenres.map((genre, index) => (
-            <div key={genre.name} style={{ marginBottom: 15 }}>
-              <div style={{ 
+          <div style={{ display: "flex", flexDirection: "column", gap: 15 }}>
+            {topGenres.map((genre, index) => (
+              <div key={genre.name} style={{ 
                 display: "flex", 
-                justifyContent: "space-between", 
-                alignItems: "center",
-                marginBottom: 8
+                alignItems: "center", 
+                justifyContent: "space-between",
+                padding: "10px 0",
+                borderBottom: index < topGenres.length - 1 ? "1px solid #444" : "none"
               }}>
-                <div style={{ display: "flex", alignItems: "center" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 15 }}>
                   <div style={{
-                    width: 12,
-                    height: 12,
+                    width: "30px",
+                    height: "30px",
                     backgroundColor: genre.color,
                     borderRadius: "50%",
-                    marginRight: 10
-                  }} />
-                  <span style={{ fontSize: "14px", color: "white" }}>{genre.name}</span>
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: "12px",
+                    fontWeight: "bold",
+                    color: "white"
+                  }}>
+                    {index + 1}
+                  </div>
+                  <span style={{ color: "white", fontWeight: "500" }}>
+                    {genre.name}
+                  </span>
                 </div>
-                <span style={{ fontSize: "14px", color: "#888" }}>{genre.percentage}%</span>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <div style={{
+                    width: "60px",
+                    height: "6px",
+                    backgroundColor: "#444",
+                    borderRadius: "3px",
+                    overflow: "hidden"
+                  }}>
+                    <div style={{
+                      height: "100%",
+                      width: `${genre.percentage}%`,
+                      backgroundColor: genre.color,
+                      borderRadius: "3px"
+                    }} />
+                  </div>
+                  <span style={{ color: "white", fontSize: "14px", minWidth: "35px" }}>
+                    {genre.percentage}%
+                  </span>
+                </div>
               </div>
-              <div style={{
-                height: "6px",
-                backgroundColor: "#444",
-                borderRadius: "3px",
-                overflow: "hidden",
-                marginLeft: 22
-              }}>
-                <div style={{
-                  height: "100%",
-                  width: `${genre.percentage}%`,
-                  backgroundColor: genre.color,
-                  borderRadius: "3px",
-                  transition: "width 0.8s ease"
-                }} />
-              </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
     </Layout>

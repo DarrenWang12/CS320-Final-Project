@@ -52,70 +52,86 @@ export default function Header() {
       justifyContent: "space-between", 
       alignItems: "center", 
       marginBottom: 40,
-      padding: "0 20px"
+      padding: "20px 24px",
+      borderBottom: "1px solid #333"
     }}>
       {/* Logo */}
-      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
         <div style={{ 
-          backgroundColor: "#4CAF50", 
-          borderRadius: "50%", 
-          width: 40, 
-          height: 40, 
+          backgroundColor: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)", 
+          borderRadius: "12px", 
+          width: 32, 
+          height: 32, 
           display: "flex", 
           alignItems: "center", 
           justifyContent: "center", 
-          fontSize: "20px" 
+          fontSize: "16px" 
         }}>
           🎵
         </div>
-        <h1 style={{ margin: 0, fontSize: "24px", color: "#ffffff" }}>Mood Music</h1>
+        <div>
+          <h1 style={{ margin: 0, fontSize: "20px", color: "#ffffff", fontWeight: "600" }}>MoodTune</h1>
+          <p style={{ margin: 0, fontSize: "12px", color: "#888" }}>Your emotional soundtrack</p>
+        </div>
       </div>
       
       {/* Navigation Tabs */}
-      <div style={{ display: "flex", gap: 30 }}>
+      <div style={{ display: "flex", gap: 8 }}>
         <Link href="/dashboard" style={{ textDecoration: 'none' }}>
-          <span style={{ 
+          <div style={{ 
             cursor: "pointer", 
-            color: isActiveTab('/dashboard') ? "#4CAF50" : "#ffffff",
-            opacity: isActiveTab('/dashboard') ? 1 : 0.8,
-            fontSize: "16px",
-            fontWeight: isActiveTab('/dashboard') ? "600" : "400",
-            borderBottom: isActiveTab('/dashboard') ? "2px solid #4CAF50" : "none",
-            paddingBottom: "4px",
-            transition: "all 0.3s ease"
+            color: isActiveTab('/dashboard') ? "#ffffff" : "#888",
+            backgroundColor: isActiveTab('/dashboard') ? "#333" : "transparent",
+            fontSize: "14px",
+            fontWeight: "500",
+            padding: "8px 16px",
+            borderRadius: "8px",
+            transition: "all 0.3s ease",
+            display: "flex",
+            alignItems: "center",
+            gap: 8
           }}>
-            Dashboard
-          </span>
+            
+            Discover
+          </div>
         </Link>
         
         <Link href="/collections" style={{ textDecoration: 'none' }}>
-          <span style={{ 
+          <div style={{ 
             cursor: "pointer", 
-            color: isActiveTab('/collections') ? "#4CAF50" : "#ffffff",
-            opacity: isActiveTab('/collections') ? 1 : 0.8,
-            fontSize: "16px",
-            fontWeight: isActiveTab('/collections') ? "600" : "400",
-            borderBottom: isActiveTab('/collections') ? "2px solid #4CAF50" : "none",
-            paddingBottom: "4px",
-            transition: "all 0.3s ease"
+            color: isActiveTab('/collections') ? "#ffffff" : "#888",
+            backgroundColor: isActiveTab('/collections') ? "#333" : "transparent",
+            fontSize: "14px",
+            fontWeight: "500",
+            padding: "8px 16px",
+            borderRadius: "8px",
+            transition: "all 0.3s ease",
+            display: "flex",
+            alignItems: "center",
+            gap: 8
           }}>
+            
             Collections
-          </span>
+          </div>
         </Link>
         
         <Link href="/analytics" style={{ textDecoration: 'none' }}>
-          <span style={{ 
+          <div style={{ 
             cursor: "pointer", 
-            color: isActiveTab('/analytics') ? "#4CAF50" : "#ffffff",
-            opacity: isActiveTab('/analytics') ? 1 : 0.8,
-            fontSize: "16px",
-            fontWeight: isActiveTab('/analytics') ? "600" : "400",
-            borderBottom: isActiveTab('/analytics') ? "2px solid #4CAF50" : "none",
-            paddingBottom: "4px",
-            transition: "all 0.3s ease"
+            color: isActiveTab('/analytics') ? "#ffffff" : "#888",
+            backgroundColor: isActiveTab('/analytics') ? "#333" : "transparent",
+            fontSize: "14px",
+            fontWeight: "500",
+            padding: "8px 16px",
+            borderRadius: "8px",
+            transition: "all 0.3s ease",
+            display: "flex",
+            alignItems: "center",
+            gap: 8
           }}>
+            
             Analytics
-          </span>
+          </div>
         </Link>
       </div>
       
@@ -195,7 +211,7 @@ export default function Header() {
                   onMouseEnter={(e) => e.target.style.backgroundColor = "#333"}
                   onMouseLeave={(e) => e.target.style.backgroundColor = "transparent"}
                 >
-                  👤 Profile Settings
+                  Profile Settings
                 </button>
                 
                 <button
@@ -217,7 +233,7 @@ export default function Header() {
                   onMouseEnter={(e) => e.target.style.backgroundColor = "#333"}
                   onMouseLeave={(e) => e.target.style.backgroundColor = "transparent"}
                 >
-                  🎵 Music Preferences
+                  Music Preferences
                 </button>
                 
                 <div style={{ height: "1px", backgroundColor: "#555", margin: "10px 0" }} />
@@ -239,7 +255,7 @@ export default function Header() {
                   onMouseEnter={(e) => e.target.style.backgroundColor = "#F4433620"}
                   onMouseLeave={(e) => e.target.style.backgroundColor = "transparent"}
                 >
-                  🚪 Logout
+                  Logout
                 </button>
               </div>
             </div>

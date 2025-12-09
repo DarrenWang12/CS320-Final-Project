@@ -76,11 +76,8 @@ export default function Collections() {
       });
   }, []);
 
-  const filters = ["All", "Happy", "Sad", "Energized", "Angry", "Calm"];
-
-  const filteredCollections = selectedFilter === "All" 
-    ? collections 
-    : collections.filter(collection => collection.mood === selectedFilter);
+  // Remove filtering - show all collections
+  const filteredCollections = collections;
 
   if (loading) {
     return (
@@ -95,7 +92,7 @@ export default function Collections() {
   return (
     <Layout>
       {/* Page Header */}
-      <div style={{ textAlign: "center", marginBottom: 40 }}>
+      <div style={{ marginBottom: 40 }}>
         <h2 style={{ 
           fontSize: "48px", 
           margin: "20px 0", 
@@ -103,42 +100,58 @@ export default function Collections() {
           WebkitBackgroundClip: "text",
           WebkitTextFillColor: "transparent",
           backgroundClip: "text",
-          fontWeight: "bold"
+          fontWeight: "bold",
+          textAlign: "center"
         }}>
           Your Music Collections
         </h2>
-        <p style={{ color: "#888", fontSize: "18px" }}>
-          Organize and discover your mood-based playlists
-        </p>
-      </div>
-
-      {/* Filter Tabs */}
-      <div style={{ 
-        display: "flex", 
-        justifyContent: "center", 
-        gap: 20, 
-        marginBottom: 40,
-        flexWrap: "wrap"
-      }}>
-        {filters.map((filter) => (
-          <button
-            key={filter}
-            onClick={() => setSelectedFilter(filter)}
-            style={{
-              backgroundColor: selectedFilter === filter ? "#4CAF50" : "transparent",
-              color: selectedFilter === filter ? "white" : "#888",
-              border: selectedFilter === filter ? "2px solid #4CAF50" : "2px solid #555",
-              padding: "10px 20px",
-              borderRadius: "25px",
-              cursor: "pointer",
-              fontSize: "14px",
-              fontWeight: selectedFilter === filter ? "600" : "400",
-              transition: "all 0.3s ease"
-            }}
+        
+        {/* Subtitle and Create Button on same line */}
+        <div style={{ 
+          position: "relative",
+          maxWidth: "1200px",
+          margin: "0 auto",
+          padding: "0 20px"
+        }}>
+          {/* Centered subtitle */}
+          <div style={{ textAlign: "center" }}>
+            <p style={{ color: "#888", fontSize: "18px", margin: 0 }}>
+              Organize and discover your mood-based playlists
+            </p>
+          </div>
+          
+          {/* Absolutely positioned button */}
+          <button style={{
+            position: "absolute",
+            top: "50%",
+            right: "20px",
+            transform: "translateY(-50%)",
+            backgroundColor: "transparent",
+            color: "#4CAF50",
+            border: "2px dashed #4CAF50",
+            padding: "12px 24px",
+            borderRadius: "15px",
+            fontSize: "14px",
+            fontWeight: "600",
+            cursor: "pointer",
+            transition: "all 0.3s ease",
+            display: "flex",
+            alignItems: "center",
+            gap: 8
+          }}
+          onMouseEnter={(e) => {
+            e.target.style.backgroundColor = "#4CAF5010";
+            e.target.style.transform = "translateY(-50%) translateY(-2px)";
+          }}
+          onMouseLeave={(e) => {
+            e.target.style.backgroundColor = "transparent";
+            e.target.style.transform = "translateY(-50%)";
+          }}
           >
-            {filter}
+            <span style={{ fontSize: "16px" }}>+</span>
+            Create New Collection
           </button>
-        ))}
+        </div>
       </div>
 
       {/* Collections Grid */}
@@ -283,40 +296,7 @@ export default function Collections() {
         ))}
       </div>
 
-      {/* Create New Collection Button */}
-      <div style={{ 
-        display: "flex", 
-        justifyContent: "center", 
-        marginTop: 50,
-        marginBottom: 50
-      }}>
-        <button style={{
-          backgroundColor: "transparent",
-          color: "#4CAF50",
-          border: "2px dashed #4CAF50",
-          padding: "20px 40px",
-          borderRadius: "15px",
-          fontSize: "16px",
-          fontWeight: "600",
-          cursor: "pointer",
-          transition: "all 0.3s ease",
-          display: "flex",
-          alignItems: "center",
-          gap: 10
-        }}
-        onMouseEnter={(e) => {
-          e.target.style.backgroundColor = "#4CAF5010";
-          e.target.style.transform = "translateY(-2px)";
-        }}
-        onMouseLeave={(e) => {
-          e.target.style.backgroundColor = "transparent";
-          e.target.style.transform = "translateY(0)";
-        }}
-        >
-          <span style={{ fontSize: "20px" }}>+</span>
-          Create New Collection
-        </button>
-      </div>
+
     </Layout>
   );
 }
