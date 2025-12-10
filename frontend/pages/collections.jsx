@@ -1,9 +1,24 @@
 import React, { useState, useEffect } from "react";
+import { useRouter } from "next/router";
 import Layout from "../components/Layout";
+import { onAuthStateChange } from "../src/firebase/auth";
 
 export default function Collections() {
   const [loading, setLoading] = useState(true);
   const [collections, setCollections] = useState([]);
+  const router = useRouter();
+
+  useEffect(() => {
+    // Check Firebase auth state
+    const unsubscribe = onAuthStateChange((user) => {
+      if (!user) {
+        router.push("/");
+        return;
+      }
+    });
+
+    return () => unsubscribe();
+  }, [router]);
 
   useEffect(() => {
     // Fetch collections from backend

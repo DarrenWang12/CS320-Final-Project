@@ -1,12 +1,29 @@
 import React, { useState, useEffect } from "react";
+import { useRouter } from "next/router";
 import Layout from "../components/Layout";
+import { onAuthStateChange } from "../src/firebase/auth";
 
 export default function Analytics() {
   const [loading, setLoading] = useState(true);
   const [timeFilter, setTimeFilter] = useState("This Week");
   const [analyticsData, setAnalyticsData] = useState(null);
+  const router = useRouter();
 
   useEffect(() => {
+    // Check Firebase auth state
+    const unsubscribe = onAuthStateChange((user) => {
+      if (!user) {
+        router.push("/");
+        return;
+      }
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [router]);
+
+  useEffect(() => {
+    if (loading) return;
     // Fetch analytics from backend
     fetch(`http://localhost:8000/api/analytics/overview?time_filter=${timeFilter}`)
       .then(response => response.json())

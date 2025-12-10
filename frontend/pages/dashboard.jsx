@@ -1,15 +1,71 @@
 import React, { useState, useEffect } from "react";
+import { useRouter } from "next/router";
 import Layout from "../components/Layout";
+import { getCurrentUser, onAuthStateChange } from "../src/firebase/auth";
+import { getSpotifyTokens } from "../src/firebase/firestore";
 
 export default function Dashboard() {
   const [userInfo, setUserInfo] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selectedMood, setSelectedMood] = useState("Happy");
   const [intensity, setIntensity] = useState(50);
+  const [recentlyPlayed, setRecentlyPlayed] = useState([]);
+  const [recentlyPlayedLoading, setRecentlyPlayedLoading] = useState(false);
+  const [firebaseUser, setFirebaseUser] = useState(null);
+  const router = useRouter();
 
   useEffect(() => {
-    setLoading(false);
-  }, []);
+    // Check Firebase auth state
+    const unsubscribe = onAuthStateChange(async (user) => {
+      if (!user) {
+        // Not authenticated, redirect to home
+        router.push("/");
+        return;
+      }
+      
+      setFirebaseUser(user);
+      
+      // Check if user has Spotify tokens
+      try {
+        const { getSpotifyTokens } = await import("../src/firebase/firestore");
+        const tokens = await getSpotifyTokens(user.uid);
+        if (!tokens || !tokens.accessToken) {
+          // No Spotify tokens, redirect to home to connect Spotify
+          router.push("/");
+          return;
+        }
+        
+        // Fetch recently played tracks
+        fetchRecentlyPlayed(user.uid);
+      } catch (error) {
+        console.error("Error checking Spotify auth:", error);
+        setLoading(false);
+      }
+    });
+
+    return () => unsubscribe();
+  }, [router]);
+
+  const fetchRecentlyPlayed = async (firebaseUserId) => {
+    setRecentlyPlayedLoading(true);
+    try {
+      const response = await fetch(
+        `http://127.0.0.1:8000/api/me/recently-played?firebase_user_id=${firebaseUserId}`
+      );
+      
+      if (response.ok) {
+        const data = await response.json();
+        setRecentlyPlayed(data.items || []);
+      } else {
+        console.error("Failed to fetch recently played:", response.statusText);
+      }
+    } catch (error) {
+      console.error("Error fetching recently played tracks:", error);
+    } finally {
+      setRecentlyPlayedLoading(false);
+      setLoading(false);
+    }
+  };
 
   // Mock recommended songs
   const recommendedSongs = [
@@ -187,6 +243,82 @@ export default function Dashboard() {
           <span style={{ fontSize: "20px" }}></span>
           Get {selectedMood} Recommendations
         </button>
+      </div>
+
+      {/* Recently Played Tracks */}
+      <div style={{ maxWidth: "800px", margin: "0 auto 50px auto" }}>
+        <h3 style={{ color: "#4CAF50", marginBottom: 20, fontSize: "24px" }}>
+          Recently Played
+        </h3>
+        
+        <div style={{ backgroundColor: "#2a2a2a", borderRadius: "15px", padding: "20px" }}>
+          {recentlyPlayedLoading ? (
+            <div style={{ textAlign: "center", padding: "40px", color: "#888" }}>
+              Loading recently played tracks...
+            </div>
+          ) : recentlyPlayed.length === 0 ? (
+            <div style={{ textAlign: "center", padding: "40px", color: "#888" }}>
+              No recently played tracks found. Start listening to music on Spotify!
+            </div>
+          ) : (
+            recentlyPlayed.map((item, index) => {
+              const track = item.track;
+              const artists = track.artists.map(a => a.name).join(", ");
+              const durationMs = track.duration_ms;
+              const minutes = Math.floor(durationMs / 60000);
+              const seconds = Math.floor((durationMs % 60000) / 1000);
+              const duration = `${minutes}:${seconds.toString().padStart(2, "0")}`;
+              const albumImage = track.album.images[0]?.url || null;
+              
+              return (
+                <div
+                  key={item.played_at || index}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    padding: "15px 0",
+                    borderBottom: index < recentlyPlayed.length - 1 ? "1px solid #444" : "none",
+                    cursor: "pointer",
+                    transition: "background-color 0.2s ease"
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#333"}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "transparent"}
+                >
+                  <div style={{
+                    width: 50,
+                    height: 50,
+                    backgroundColor: "#4CAF50",
+                    borderRadius: "8px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: "20px",
+                    marginRight: 15,
+                    overflow: "hidden",
+                    backgroundImage: albumImage ? `url(${albumImage})` : "none",
+                    backgroundSize: "cover",
+                    backgroundPosition: "center"
+                  }}>
+                    {!albumImage && "🎵"}
+                  </div>
+                  
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: "bold", marginBottom: 5, color: "#fff" }}>
+                      {track.name}
+                    </div>
+                    <div style={{ color: "#888", fontSize: "14px" }}>
+                      {artists}
+                    </div>
+                  </div>
+                  
+                  <div style={{ color: "#888", fontSize: "14px" }}>
+                    {duration}
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
       </div>
 
       {/* Recommended Songs */}

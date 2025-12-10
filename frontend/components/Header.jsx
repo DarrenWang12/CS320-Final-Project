@@ -22,18 +22,28 @@ export default function Header() {
 
   const handleLogout = async () => {
     try {
-      // Call the logout endpoint
-      const response = await fetch('http://localhost:8000/auth/spotify/logout', {
-        method: 'GET',
-        credentials: 'include',
-      });
+      // Sign out from Firebase
+      const { signOutUser } = await import('../src/firebase/auth');
+      const { deleteSpotifyTokens } = await import('../src/firebase/firestore');
       
-      // Always redirect to home page after logout attempt
-      window.location.href = 'http://localhost:3000/';
+      // Get current user before signing out
+      const { getCurrentUser } = await import('../src/firebase/auth');
+      const user = getCurrentUser();
+      
+      if (user) {
+        // Delete Spotify tokens from Firestore
+        await deleteSpotifyTokens(user.uid);
+      }
+      
+      // Sign out from Firebase
+      await signOutUser();
+      
+      // Redirect to home page
+      window.location.href = '/';
     } catch (error) {
       console.error('Error logging out:', error);
       // Fallback: redirect to home page anyway
-      window.location.href = 'http://localhost:3000/';
+      window.location.href = '/';
     }
   };
 

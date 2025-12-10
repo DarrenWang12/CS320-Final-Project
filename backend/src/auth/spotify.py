@@ -9,11 +9,16 @@ from datetime import datetime, timedelta
 from typing import Optional
 
 import httpx
-from fastapi import APIRouter, Request, Response, HTTPException
+from fastapi import APIRouter, Request, Response, HTTPException, Query
 from starlette.responses import RedirectResponse
 from dotenv import load_dotenv
 
-from ..storage.memory_storage import storage
+from ..storage.memory_storage import storage  # Keep for state management
+from ..storage.firestore_storage import (
+    save_spotify_tokens as save_tokens_firestore,
+    get_spotify_tokens as get_tokens_firestore,
+    update_spotify_access_token as update_token_firestore,
+)
 
 # Load environment variables from .env file
 # Look for .env in the backend directory (parent of src)
@@ -44,11 +49,18 @@ def _basic_auth_header(client_id: str, client_secret: str) -> str:
 
 
 @router.get("/auth/spotify/login")
-def spotify_login(response: Response):
+def spotify_login(request: Request, response: Response, firebase_user_id: Optional[str] = None):
     """
     Initiates Spotify OAuth flow.
     Generates a state token for CSRF protection and redirects to Spotify.
+    Requires firebase_user_id query parameter.
     """
+    if not firebase_user_id:
+        raise HTTPException(
+            status_code=400,
+            detail="firebase_user_id is required. Please sign in with Firebase first."
+        )
+    
     if not CLIENT_ID or not REDIRECT_URI:
         raise HTTPException(
             status_code=500,
@@ -66,7 +78,7 @@ def spotify_login(response: Response):
     # Generate state for CSRF protection
     state = secrets.token_hex(16)
     
-    # Store state in memory storage
+    # Store state in memory storage (temporary, for validation)
     storage.store_state(state)
     
     # Build Spotify authorization URL
@@ -81,10 +93,18 @@ def spotify_login(response: Response):
     url = f"{SPOTIFY_AUTH_URL}?{urlencode(params)}"
     response = RedirectResponse(url=url)
     
-    # Set the cookie on the redirect response
+    # Set cookies: state for CSRF protection and firebase_user_id for callback
     response.set_cookie(
         key="spotify_auth_state",
         value=state,
+        httponly=True,
+        secure=False,
+        samesite="lax",
+        max_age=600,
+    )
+    response.set_cookie(
+        key="firebase_user_id",
+        value=firebase_user_id,
         httponly=True,
         secure=False,
         samesite="lax",
@@ -163,25 +183,35 @@ async def spotify_callback(
     spotify_user_id = me["id"]
     spotify_email = me.get("email")
     
-    # Get or create user
-    user = storage.get_or_create_user(spotify_email, spotify_user_id)
+    # Get Firebase user ID from cookie
+    firebase_user_id = request.cookies.get("firebase_user_id")
+    if not firebase_user_id:
+        raise HTTPException(
+            status_code=400,
+            detail="Firebase user ID not found. Please sign in with Firebase first."
+        )
     
-    # Store tokens
-    storage.save_spotify_tokens(
+    # Get Firebase user email (we'll use the email from Firebase Auth, but fallback to Spotify email)
+    # For now, we'll use the Firebase user ID to link the tokens
+    firebase_email = spotify_email  # In production, get from Firebase Auth token
+    
+    # Store tokens in Firestore
+    save_tokens_firestore(
+        firebase_user_id=firebase_user_id,
         spotify_user_id=spotify_user_id,
         access_token=access_token,
         refresh_token=refresh_token,
-        scope=scope,
         expires_in=expires_in,
-        user_id=user.id
+        scope=scope,
+        email=firebase_email
     )
     
     # Redirect to frontend
-    # In production, we would set a session cookie here
     redirect_url = f"{FRONTEND_URL}/dashboard"
     response = RedirectResponse(url=redirect_url)
-    # Clear the state cookie
+    # Clear the state and firebase_user_id cookies
     response.delete_cookie("spotify_auth_state")
+    response.delete_cookie("firebase_user_id")
     
     return response
 
@@ -253,61 +283,104 @@ async def spotify_refresh(spotify_user_id: str):
 
 
 @router.get("/api/me/recently-played")
-async def get_recently_played(spotify_user_id: str):
+async def get_recently_played(firebase_user_id: str = Query(..., description="Firebase user ID")):
     """
-    Example endpoint to get user's recently played tracks.
-    In production, you'd get the user from a session/JWT instead of passing spotify_user_id.
+    Get user's recently played tracks from Spotify.
+    Requires firebase_user_id to retrieve tokens from Firestore.
     """
     SPOTIFY_RECENTLY_PLAYED_URL = "https://api.spotify.com/v1/me/player/recently-played"
     
-    # Get account
-    account = storage.get_spotify_account(spotify_user_id)
-    if not account:
-        raise HTTPException(status_code=400, detail="Spotify not connected")
+    if not CLIENT_ID or not CLIENT_SECRET:
+        raise HTTPException(
+            status_code=500,
+            detail="Spotify OAuth not configured."
+        )
+    
+    # Get tokens from Firestore
+    try:
+        token_data = get_tokens_firestore(firebase_user_id)
+        print(f"Debug: Retrieved token data for user {firebase_user_id}: {bool(token_data)}")
+        if token_data:
+            print(f"Debug: Token data keys: {list(token_data.keys())}")
+            print(f"Debug: Has accessToken: {bool(token_data.get('accessToken'))}")
+    except Exception as e:
+        print(f"Error getting tokens from Firestore: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error retrieving tokens: {str(e)}"
+        )
+    
+    if not token_data or not token_data.get("accessToken"):
+        print(f"Debug: No token data found for user {firebase_user_id}")
+        raise HTTPException(
+            status_code=401,
+            detail="Spotify not connected. Please connect your Spotify account."
+        )
+    
+    access_token = token_data["accessToken"]
+    refresh_token = token_data.get("refreshToken")
+    expires_at = token_data.get("expiresAt")
     
     # Check if token is expired and refresh if needed
-    if account.expires_at <= datetime.utcnow():
-        # Refresh token
-        async with httpx.AsyncClient() as client:
-            res = await client.post(
-                SPOTIFY_TOKEN_URL,
-                data={
-                    "grant_type": "refresh_token",
-                    "refresh_token": account.refresh_token,
-                },
-                headers={
-                    "Content-Type": "application/x-www-form-urlencoded",
-                    "Authorization": _basic_auth_header(CLIENT_ID, CLIENT_SECRET),
-                },
-            )
-        
-        if res.status_code == 200:
-            data = res.json()
-            account.access_token = data["access_token"]
-            account.expires_at = datetime.utcnow() + timedelta(seconds=data["expires_in"])
-            if data.get("refresh_token"):
-                account.refresh_token = data["refresh_token"]
-            storage.save_spotify_tokens(
-                spotify_user_id=account.spotify_user_id,
-                access_token=account.access_token,
-                refresh_token=account.refresh_token,
-                scope=account.scope,
-                expires_in=int((account.expires_at - datetime.utcnow()).total_seconds()),
-                user_id=account.user_id
-            )
+    if expires_at:
+        # Handle Firestore Timestamp
+        if hasattr(expires_at, 'timestamp'):
+            # Firestore Timestamp object
+            expires_at_dt = datetime.fromtimestamp(expires_at.timestamp())
+        elif isinstance(expires_at, datetime):
+            expires_at_dt = expires_at
         else:
-            raise HTTPException(status_code=400, detail="Failed to refresh token")
+            # Try to convert if it's a different format
+            expires_at_dt = expires_at
+        
+        if isinstance(expires_at_dt, datetime) and expires_at_dt <= datetime.utcnow():
+            # Token expired, refresh it
+            if not refresh_token:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Token expired and no refresh token available"
+                )
+            
+            async with httpx.AsyncClient() as client:
+                res = await client.post(
+                    SPOTIFY_TOKEN_URL,
+                    data={
+                        "grant_type": "refresh_token",
+                        "refresh_token": refresh_token,
+                    },
+                    headers={
+                        "Content-Type": "application/x-www-form-urlencoded",
+                        "Authorization": _basic_auth_header(CLIENT_ID, CLIENT_SECRET),
+                    },
+                )
+            
+            if res.status_code == 200:
+                data = res.json()
+                new_access_token = data["access_token"]
+                new_expires_in = data["expires_in"]
+                new_refresh_token = data.get("refresh_token", refresh_token)
+                
+                # Update token in Firestore
+                update_token_firestore(firebase_user_id, new_access_token, new_expires_in)
+                access_token = new_access_token
+            else:
+                raise HTTPException(status_code=400, detail="Failed to refresh token")
     
     # Fetch recently played tracks
     async with httpx.AsyncClient() as client:
         res = await client.get(
             SPOTIFY_RECENTLY_PLAYED_URL,
-            headers={"Authorization": f"Bearer {account.access_token}"},
+            headers={"Authorization": f"Bearer {access_token}"},
             params={"limit": 20},
         )
     
     if res.status_code != 200:
-        raise HTTPException(status_code=400, detail="Spotify API error")
+        raise HTTPException(
+            status_code=res.status_code,
+            detail=f"Spotify API error: {res.text}"
+        )
     
     return res.json()
 

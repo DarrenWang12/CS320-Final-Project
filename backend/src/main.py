@@ -1,17 +1,37 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 import uvicorn
 import pathlib
 
 from .auth.spotify import router as spotify_router
+from .storage.firestore_storage import init_firestore
 
 # Load environment variables from .env file
 # Look for .env in the backend directory (parent of src)
 backend_dir = pathlib.Path(__file__).parent.parent
 load_dotenv(dotenv_path=backend_dir / ".env")
 
-app = FastAPI(title="CS320 Final Project API")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup: Initialize Firestore
+    try:
+        init_firestore()
+        print("✓ Application startup complete")
+    except Exception as e:
+        print(f"✗ Failed to initialize Firestore: {e}")
+        print("⚠ Application will start but Firestore operations will fail")
+    yield
+    # Shutdown: Cleanup if needed
+    print("Application shutdown")
+
+
+app = FastAPI(
+    title="CS320 Final Project API",
+    lifespan=lifespan
+)
 
 # Configure CORS to allow frontend requests
 app.add_middleware(
@@ -26,7 +46,7 @@ app.add_middleware(
 )
 
 # Include auth routes
-app.include_router(spotify_router)
+app.include_router(spotify_router, tags=["spotify"])
 
 @app.get("/")
 async def read_root():
