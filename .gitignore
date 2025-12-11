@@ -61,3 +61,8 @@ Thumbs.db
 *.log
 logs/
 
+# ML Preprocessed Data (auto-generated)
+backend/data/*.npy
+backend/data/*.parquet
+backend/data/*.pkl
+backend/data/.cache/
