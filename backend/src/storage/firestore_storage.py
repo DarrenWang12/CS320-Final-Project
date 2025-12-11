@@ -4,7 +4,7 @@ Firestore storage for Spotify tokens and user data.
 import os
 import json
 from datetime import datetime, timedelta
-from typing import Optional
+from typing import Optional, List
 import pathlib
 from dotenv import load_dotenv
 
@@ -20,6 +20,8 @@ _db: Optional[firestore.Client] = None
 
 SPOTIFY_TOKENS_COLLECTION = "spotifyTokens"
 ONE_HOUR_IN_SECONDS = 3600
+
+USER_SESSIONS_COLLECTION = "userSessions"
 
 
 def init_firestore():
@@ -247,4 +249,117 @@ def delete_spotify_tokens(firebase_user_id: str):
         "refreshToken": None,
         "deletedAt": firestore.SERVER_TIMESTAMP,
     })
+
+
+def save_user_session(
+    firebase_user_id: str,
+    track_id: str,
+    mood: str,
+    intensity: int = 50,
+    track_name: Optional[str] = None,
+    artist_name: Optional[str] = None,
+    session_type: str = "track"  # "track" or "playlist"
+) -> dict:
+    """
+    Save a user mood-song session to Firestore.
+    
+    Args:
+        firebase_user_id: Firebase Auth user ID
+        track_id: Spotify track ID
+        mood: Mood label (Happy, Sad, Energized, Angry, Calm)
+        intensity: Mood intensity 0-100 (default 50)
+        track_name: Track name (optional, for easier querying)
+        artist_name: Artist name (optional, for easier querying)
+        session_type: "track" for single track, "playlist" for playlist tagging
+    
+    Returns:
+        Saved session data dict
+    """
+    db = get_db()
+    sessions_ref = db.collection(USER_SESSIONS_COLLECTION)
+    
+    session_data = {
+        "firebaseUserId": firebase_user_id,
+        "trackId": track_id,
+        "mood": mood,
+        "intensity": intensity,
+        "sessionType": session_type,
+        "trackName": track_name,
+        "artistName": artist_name,
+        "createdAt": firestore.SERVER_TIMESTAMP,
+        "updatedAt": firestore.SERVER_TIMESTAMP,
+    }
+    
+    # Add document with auto-generated ID
+    doc_ref = sessions_ref.add(session_data)[1]  # Returns (write_result, doc_ref)
+    session_data["id"] = doc_ref.id
+    
+    return session_data
+
+
+def get_user_sessions(
+    firebase_user_id: str,
+    mood: Optional[str] = None,
+    limit: Optional[int] = None
+) -> List[dict]:
+    """
+    Get user's mood-song sessions from Firestore.
+    
+    Args:
+        firebase_user_id: Firebase Auth user ID
+        mood: Optional mood filter
+        limit: Optional limit on number of results
+    
+    Returns:
+        List of session dicts
+    """
+    db = get_db()
+    sessions_ref = db.collection(USER_SESSIONS_COLLECTION)
+    
+    # Query by user ID
+    query = sessions_ref.where("firebaseUserId", "==", firebase_user_id)
+    
+    # Optional mood filter
+    if mood:
+        query = query.where("mood", "==", mood)
+    
+    # Order by creation time (newest first)
+    query = query.order_by("createdAt", direction=firestore.Query.DESCENDING)
+    
+    # Optional limit
+    if limit:
+        query = query.limit(limit)
+    
+    docs = query.stream()
+    
+    sessions = []
+    for doc in docs:
+        session_data = doc.to_dict()
+        session_data["id"] = doc.id
+        # Convert Firestore timestamp to ISO string if needed
+        if "createdAt" in session_data and hasattr(session_data["createdAt"], "timestamp"):
+            session_data["createdAt"] = session_data["createdAt"].timestamp()
+        sessions.append(session_data)
+    
+    return sessions
+
+
+def delete_user_session(session_id: str) -> bool:
+    """
+    Delete a user session by ID.
+    
+    Args:
+        session_id: Firestore document ID
+    
+    Returns:
+        True if deleted, False if not found
+    """
+    db = get_db()
+    session_ref = db.collection(USER_SESSIONS_COLLECTION).document(session_id)
+    doc = session_ref.get()
+    
+    if doc.exists:
+        session_ref.delete()
+        return True
+    return False
 

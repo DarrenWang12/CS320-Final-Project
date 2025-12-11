@@ -39,8 +39,26 @@
    # Option 2: OR use JSON string directly (alternative to file path)
    # FIREBASE_SERVICE_ACCOUNT_JSON={"type":"service_account",...}
    ```
+5. Get the Spotify Dataset:
+   
+   The ML recommendation system requires the Spotify dataset which should already be in the data folder. If not there, download it from:
+   
+   - **Kaggle:** [Ultimate Spotify Tracks DB](https://www.kaggle.com/datasets/zaheenhamidani/ultimate-spotify-tracks-db)
+   - Look for the file: `SpotifyFeatures.csv`
+   
+   After downloading, place the CSV file in the backend/data directory and rename it to `dataset.csv`:
+   mv SpotifyFeatures.csv backend/data/dataset.csv   **Note:** Preprocessed files (`.npy`, `.parquet`, `.pkl`) are generated automatically in the next step and are not included in the repository.
 
-5. Start the FastAPI server:
+6. Preprocess the Dataset:
+
+   The dataset loader will automatically preprocess the dataset when first accessed. You can trigger this by running the ML test pipeline:
+   python3 src/ml/tests/test_pipeline.py
+   This will:
+   - Clean and preprocess the data
+   - Generate embeddings and save preprocessed files to `backend/data/` (`.npy`, `.parquet`, `.pkl`)
+   - If you see "Dataset preprocessed and test pipeline passed!" in the terminal, everything worked!
+
+6. Start the FastAPI server:
    uvicorn src.main:app --reload --host 0.0.0.0 --port 8000
 
    The backend will be available at: **http://localhost:8000**
