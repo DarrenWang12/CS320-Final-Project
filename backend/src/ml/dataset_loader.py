@@ -1,213 +1,236 @@
 import pandas as pd
 import numpy as np
-from typing import Dict, Optional
-import os
+from typing import Dict, Optional, Tuple
 import pathlib
+from sklearn.preprocessing import StandardScaler
 import pickle
-import hashlib
-from datetime import datetime
 
-class SpotifyKaggleLoader:
+class MoodDatasetPreprocessor:
     """
-    Loads the Kaggle Spotify dataset with intelligent caching
+    Preprocessor for mood-based music recommendations.
+    Loads and preprocesses the Spotify dataset for similar mood matching.
     """
-    def __init__(self, csv_path: str = None):
+    
+    def __init__(self, csv_path: Optional[pathlib.Path] = None):
         if csv_path is None:
             backend_dir = pathlib.Path(__file__).parent.parent.parent
             csv_path = backend_dir / "data" / "dataset.csv"
         
         self.csv_path = pathlib.Path(csv_path)
-        self.cache_dir = self.csv_path.parent / ".cache"
-        self.cache_dir.mkdir(exist_ok=True)
-        
         self.df = None
-        self.track_index = {}
+        # Preprocessed embeddings
+        self.feature_matrix = None
+        self.scaler = StandardScaler()
+        # we store track info separately
+        self.track_metadata = None
         
-        if os.path.exists(self.csv_path):
-            self.load_dataset_cached()
-        else:
-            print("Audio features will be estimated from genres only")
+    def load_raw_data(self) -> pd.DataFrame:
+        """Load the raw CSV dataset"""
+        if not self.csv_path.exists():
+            raise FileNotFoundError(f"Dataset not found at {self.csv_path}")
+        
+        df = pd.read_csv(self.csv_path)
+        return df
     
-    def _get_csv_hash(self) -> str:
-        """Generate hash of CSV file for cache validation"""
-        with open(self.csv_path, 'rb') as f:
-            # read first 1MB for hash
-            file_hash = hashlib.md5(f.read(1024 * 1024)).hexdigest()
-        return file_hash
+    def clean_data(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Remove rows with missing critical audio features"""
+        features = [
+            'danceability', 'energy', 'valence', 'acousticness',
+            'tempo', 'loudness', 'speechiness', 'instrumentalness', 'liveness'
+        ]
+        
+        initial_count = len(df)
+        df_clean = df.dropna(subset=features).copy()
+        removed = initial_count - len(df_clean)
+           
+        return df_clean.reset_index(drop=True)
     
-    def _get_cache_path(self) -> pathlib.Path:
-        """Get path for cached pickle file"""
-        return self.cache_dir / "dataset.pkl"
+    def encode_categorical_features(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Encode categorical features for numerical processing"""
+        df_encoded = df.copy()
+        
+        # mode: major (1) or minor (0)
+        if 'mode' in df_encoded.columns:
+            df_encoded['mode'] = df_encoded['mode'].map({'Major': 1, 'Minor': 0})
+            df_encoded['mode'] = df_encoded['mode'].fillna(0)  # Default to minor if missing
+        
+        # one-hot encode key (0-11 representing musical keys)
+        if 'key' in df_encoded.columns:
+            df_encoded = pd.get_dummies(df_encoded, columns=['key'], prefix='key', dtype=float)
+        
+        # one-hot encode time_signature (usually 3, 4, or 5)
+        if 'time_signature' in df_encoded.columns:
+            df_encoded = pd.get_dummies(df_encoded, columns=['time_signature'], prefix='ts', dtype=float)
+        
+        return df_encoded
     
-    def _get_cache_metadata_path(self) -> pathlib.Path:
-        """Get path for cache metadata"""
-        return self.cache_dir / "dataset_meta.pkl"
-    
-    def _is_cache_valid(self):
-        cache_path = self._get_cache_path()
-        meta_path = self._get_cache_metadata_path()
-        if not cache_path.exists() or not meta_path.exists():
-            return False
-        with open(meta_path, 'rb') as f:
-            metadata = pickle.load(f)
-        return metadata.get('csv_hash') == self._get_csv_hash()
+    def prepare_feature_columns(self, df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame]:
+        """
+        Separate continuous features for scaling and metadata for preservation.
+        Returns: (feature_df, metadata_df)
+        """
+        # normalize popularity to 0-1
+        if 'popularity' in df.columns:
+            df['popularity_norm'] = df['popularity'] / 100.0
+        
+        # normalize loudness from dB range (-60 to 0) to 0-1
+        if 'loudness' in df.columns:
+            df['loudness_norm'] = (df['loudness'] + 60) / 60.0
+            df['loudness_norm'] = df['loudness_norm'].clip(0, 1)
+        
+        # normalize tempo (typical range 50-200 BPM) to 0-1
+        if 'tempo' in df.columns:
+            df['tempo_norm'] = (df['tempo'] - 50) / 150.0
+            df['tempo_norm'] = df['tempo_norm'].clip(0, 1)
+        
+        # normalize duration_ms to minutes
+        if 'duration_ms' in df.columns:
+            df['duration_min'] = df['duration_ms'] / 60000.0
+        
+        # select all numerical columns for feature matrix
+        feature_columns = [col for col in df.columns if df[col].dtype in ['float64', 'int64', 'float32', 'int32']]
 
-    
-    def _save_to_cache(self):
-        """Save DataFrame and index to cache"""
-        cache_path = self._get_cache_path()
-        meta_path = self._get_cache_metadata_path()
-                
-        try:
-            cache_data = {
-                'df': self.df,
-                'track_index': self.track_index
-            }
-            with open(cache_path, 'wb') as f:
-                pickle.dump(cache_data, f, protocol=pickle.HIGHEST_PROTOCOL)
-            
-            # metadata
-            metadata = {
-                'csv_hash': self._get_csv_hash(),
-                'created_at': datetime.now(),
-                'num_tracks': len(self.df),
-                'num_indexed': len(self.track_index)
-            }
-            with open(meta_path, 'wb') as f:
-                pickle.dump(metadata, f)
-            
-        except Exception as e:
-            print(f"Failed to save cache: {e}")
-    
-    def _load_from_cache(self) -> bool:
-        """Load DataFrame and index from cache"""
-        cache_path = self._get_cache_path()
-                
-        try:
-            with open(cache_path, 'rb') as f:
-                cache_data = pickle.load(f)
-            
-            self.df = cache_data['df']
-            self.track_index = cache_data['track_index']
-            
-            return True
-        except Exception as e:
-            return False
-    
-    def load_dataset_cached(self):
-        """Load dataset with caching"""
-        # load from cache first
-        if self._is_cache_valid():
-            if self._load_from_cache():
-                return
+        # exclude metadata columns
+        exclude_cols = ['popularity', 'duration_ms', 'loudness', 'tempo']
+        feature_columns = [col for col in feature_columns if col not in exclude_cols]
         
-        # cache miss or invalid - load from CSV        
-        self.df = pd.read_csv(self.csv_path)
+        feature_df = df[feature_columns].copy()
         
-        # lookup index by track_id
-        self.track_index = {
-            row['track_id']: idx 
-            for idx, row in self.df.iterrows() 
-            if pd.notna(row['track_id'])
-        } 
-        self._save_to_cache()
+        # metadata to preserve
+        metadata_cols = ['track_id', 'track_name', 'artists', 'album_name', 
+                        'track_genre', 'popularity', 'explicit']
+        metadata_df = df[[col for col in metadata_cols if col in df.columns]].copy()
+        
+        return feature_df, metadata_df
     
-    def get_audio_features(self, track_id: str) -> Optional[Dict]:
+    def scale_features(self, feature_df: pd.DataFrame) -> np.ndarray:
+        """Scale features to have mean 0 and std 1 for similarity calculations"""
+        scaled_features = self.scaler.fit_transform(feature_df)
+        return scaled_features
+    
+    def preprocess(self) -> None:
         """
-        Get audio features for a Spotify track ID
-        
-        Returns dict with:
-        - valence: 0-1 (happiness)
-        - energy: 0-1 (intensity)
-        - danceability: 0-1
-        - acousticness: 0-1
-        - instrumentalness: 0-1
-        - speechiness: 0-1
-        - liveness: 0-1
-        - tempo: BPM
-        - loudness: dB
-        - duration_ms: milliseconds
-        - popularity: 0-100
-        - track_genre: genre label
+        Main preprocessing pipeline: load, clean, encode, scale, and prepare embeddings
         """
-        if self.df is None or track_id not in self.track_index:
+        df = self.load_raw_data()
+        
+        df = self.clean_data(df)
+        
+        df = self.encode_categorical_features(df)
+        
+        # separate features and metadata
+        feature_df, metadata_df = self.prepare_feature_columns(df)
+        
+        # scale features
+        self.feature_matrix = self.scale_features(feature_df)
+        
+        # store metadata with original DataFrame
+        self.df = df
+        self.track_metadata = metadata_df
+        
+    
+    def get_track_by_index(self, idx: int) -> Optional[Dict]:
+        """Get track metadata by index"""
+        if self.df is None or idx >= len(self.df):
             return None
         
-        idx = self.track_index[track_id]
         row = self.df.iloc[idx]
-        
         return {
-            # mood related features
-            'valence': float(row['valence']),
-            'energy': float(row['energy']),
-            'danceability': float(row['danceability']),
-
-            # secondary features
-            'acousticness': float(row['acousticness']),
-            'instrumentalness': float(row['instrumentalness']),
-            'speechiness': float(row['speechiness']),
-            'liveness': float(row['liveness']),
-            
-            # properties
-            'tempo': float(row['tempo']),
-            'loudness': float(row['loudness']),
-            'key': int(row['key']),
-            'mode': int(row['mode']),
-            'time_signature': int(row['time_signature']),
-            
-            # metadata
-            'duration_ms': int(row['duration_ms']),
-            'popularity': int(row['popularity']),
-            'explicit': bool(row['explicit']),
-            'track_genre': str(row['track_genre'])
+            'track_id': str(row.get('track_id', '')),
+            'track_name': str(row.get('track_name', '')),
+            'artists': str(row.get('artists', '')),
+            'album_name': str(row.get('album_name', '')),
+            'track_genre': str(row.get('track_genre', '')),
+            'popularity': int(row.get('popularity', 0)),
+            'explicit': bool(row.get('explicit', False)),
+            'valence': float(row.get('valence', 0.5)),
+            'energy': float(row.get('energy', 0.5)),
+            'danceability': float(row.get('danceability', 0.5)),
         }
     
-    def search_by_genre(self, genre: str, limit: int = 100) -> pd.DataFrame:
-        """Get tracks by genre (for building mood playlists)"""
+    def search_tracks(self, query: str, limit: int = 20) -> pd.DataFrame:
+        """Search tracks by name or artist"""
         if self.df is None:
             return pd.DataFrame()
         
-        genre_matches = self.df[self.df['track_genre'] == genre]
-        return genre_matches.head(limit)
+        query_lower = query.lower()
+        mask = (
+            self.df['track_name'].str.lower().str.contains(query_lower, na=False) |
+            self.df['artists'].str.lower().str.contains(query_lower, na=False)
+        )
+        
+        results = self.df[mask].head(limit).copy()
+        # Add index column for reference
+        results['index'] = results.index
+        return results[['index', 'track_id', 'track_name', 'artists', 'album_name', 'track_genre']]
     
-    def get_high_valence_tracks(self, min_valence: float = 0.7, limit: int = 50) -> pd.DataFrame:
-        """Get happy songs (high valence)"""
-        if self.df is None:
-            return pd.DataFrame()
+    def save_preprocessed(self, output_dir: Optional[pathlib.Path] = None):
+        """Save preprocessed data for faster loading"""
+        if self.feature_matrix is None:
+            raise ValueError("Must run preprocess() first")
         
-        return self.df[self.df['valence'] >= min_valence].head(limit)
+        if output_dir is None:
+            output_dir = self.csv_path.parent
+        
+        output_dir = pathlib.Path(output_dir)
+        output_dir.mkdir(exist_ok=True)
+        
+        # feature matrix
+        np.save(output_dir / "mood_embeddings.npy", self.feature_matrix)
+        
+        # save scaler
+        with open(output_dir / "scaler.pkl", 'wb') as f:
+            pickle.dump(self.scaler, f)
+        
+        # save metadata
+        self.track_metadata.to_parquet(output_dir / "track_metadata.parquet", index=False)
+        
+        # save full dataframe (for search functionality)
+        self.df.to_parquet(output_dir / "full_dataset.parquet", index=False)
+        
     
-    def get_low_valence_tracks(self, max_valence: float = 0.3, limit: int = 50) -> pd.DataFrame:
-        """Get sad songs (low valence)"""
-        if self.df is None:
-            return pd.DataFrame()
+    def load_preprocessed(self, data_dir: Optional[pathlib.Path] = None) -> bool:
+        """Load previously preprocessed data"""
+        if data_dir is None:
+            data_dir = self.csv_path.parent
         
-        return self.df[self.df['valence'] <= max_valence].head(limit)
-    
-    def get_dataset_stats(self) -> Dict:
-        """Get statistics about the dataset"""
-        if self.df is None:
-            return {}
+        data_dir = pathlib.Path(data_dir)
         
-        return {
-            'total_tracks': len(self.df),
-            'unique_genres': self.df['track_genre'].nunique(),
-            'genres': sorted(self.df['track_genre'].unique().tolist()),
-            'valence_mean': float(self.df['valence'].mean()),
-            'energy_mean': float(self.df['energy'].mean()),
-            'tempo_mean': float(self.df['tempo'].mean()),
-        }
-    
-    def clear_cache(self):
-        """Clear cached data (maybe debugging)"""
-        cache_path = self._get_cache_path()
-        meta_path = self._get_cache_metadata_path()
+        embeddings_path = data_dir / "mood_embeddings.npy"
+        scaler_path = data_dir / "scaler.pkl"
+        metadata_path = data_dir / "track_metadata.parquet"
+        dataset_path = data_dir / "full_dataset.parquet"
         
-        if cache_path.exists():
-            cache_path.unlink()
+        if not all(p.exists() for p in [embeddings_path, scaler_path, metadata_path, dataset_path]):
+            return False
         
-        if meta_path.exists():
-            meta_path.unlink()
+        try:
+            self.feature_matrix = np.load(embeddings_path)
+            
+            with open(scaler_path, 'rb') as f:
+                self.scaler = pickle.load(f)
+            
+            self.track_metadata = pd.read_parquet(metadata_path)
+            self.df = pd.read_parquet(dataset_path)
+            
+            return True
 
-# instance
-kaggle_loader = SpotifyKaggleLoader()
+        except Exception as e:
+            print(f"Error loading preprocessed data: {e}")
+            return False
+
+
+_preprocessor_instance = None
+
+def get_preprocessor() -> MoodDatasetPreprocessor:
+    """Get or create the global preprocessor instance"""
+    global _preprocessor_instance
+    if _preprocessor_instance is None:
+        _preprocessor_instance = MoodDatasetPreprocessor()
+
+        if not _preprocessor_instance.load_preprocessed():
+            _preprocessor_instance.preprocess()
+            # save for next time
+            _preprocessor_instance.save_preprocessed()
+
+    return _preprocessor_instance
