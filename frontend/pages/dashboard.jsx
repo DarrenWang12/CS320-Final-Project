@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/router";
+import dynamic from "next/dynamic";
 import Layout from "../components/Layout";
 import { getCurrentUser, onAuthStateChange } from "../src/firebase/auth";
 import { getSpotifyTokens } from "../src/firebase/firestore";
+
+const SpotifyEmbedPlayer = dynamic(() => import("../components/SpotifyEmbedPlayer"), { ssr: false });
 
 export default function Dashboard() {
   const [userInfo, setUserInfo] = useState(null);
@@ -12,6 +15,7 @@ export default function Dashboard() {
   const [recentlyPlayed, setRecentlyPlayed] = useState([]);
   const [recentlyPlayedLoading, setRecentlyPlayedLoading] = useState(false);
   const [firebaseUser, setFirebaseUser] = useState(null);
+  const [selectedTrackUri, setSelectedTrackUri] = useState(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -283,6 +287,7 @@ export default function Dashboard() {
                   }}
                   onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#333"}
                   onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "transparent"}
+                  onClick={() => setSelectedTrackUri(track.uri)}
                 >
                   <div style={{
                     width: 50,
@@ -320,6 +325,16 @@ export default function Dashboard() {
           )}
         </div>
       </div>
+
+      {/* Spotify Player */}
+      {selectedTrackUri && (
+        <div style={{ maxWidth: "800px", margin: "0 auto 50px auto" }}>
+          <h3 style={{ color: "#4CAF50", marginBottom: 20, fontSize: "24px" }}>
+            Now Playing
+          </h3>
+          <SpotifyEmbedPlayer initialUri={selectedTrackUri} />
+        </div>
+      )}
 
       {/* Recommended Songs */}
       <div style={{ maxWidth: "800px", margin: "0 auto 50px auto" }}>
